@@ -27,6 +27,7 @@ DEBUG = bool(int(os.environ.get('DEBUG', '0')))
 
 ALLOWED_HOSTS = []
 
+AUTH_USER_MODEL = 'core.User' # Custom user model
 
 # Application definition
 

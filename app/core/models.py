@@ -93,6 +93,8 @@ class Image(models.Model):
 
 class ThumbnailImage(models.Model):
     original_image = models.ForeignKey(Image, on_delete=models.CASCADE)
+    thumbnail_value = models.ForeignKey(
+        Thumbnail, on_delete=models.PROTECT, null=True)
     thumbnailed_image = models.ImageField(
         upload_to=image_file_path, validators=[image_ext_validator])
 

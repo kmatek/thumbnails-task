@@ -198,7 +198,8 @@ class ModelsTests(TestCase):
                 thumbnail_file, 'thumb', 'thumb.png',
                 'png', thumbnail_file.tell(), None)
             thumbnail_model = sample_thumbnail_image(
-                original_image=image, thumbnailed_image=thumbnail)
+                original_image=image, thumbnailed_image=thumbnail,
+                thumbnail_value=sample_thumbnail(**{'value': '1'}))
 
             uuid = 'test-uuid'
             patched_uuid.return_value = uuid
@@ -222,7 +223,8 @@ class ModelsTests(TestCase):
                     thumbnail_file, 'thumbnail', 'thumbnail.gif',
                     'gif', thumbnail_file.tell(), None)
                 thumbnail_model = sample_thumbnail_image(
-                    original_image=image, thumbnailed_image=thumbnail)
+                    original_image=image, thumbnailed_image=thumbnail,
+                    thumbnail_value=sample_thumbnail(**{'value': '1'}))
                 thumbnail_model.full_clean()  # validate fields without saving
 
     @patch('core.models.uuid.uuid4')

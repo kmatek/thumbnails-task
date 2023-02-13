@@ -20,8 +20,9 @@ services:
       - DB_NAME=dev_db
       - DB_USER=dev_db_user
       - DB_PASSWORD=dev_db_password
+      - CACHE_LOCATION=redis://:redispass@redis:6379/0
     depends_on:
-      db:
+      redis:
         condition: service_healthy
 
   db:
@@ -38,6 +39,24 @@ services:
       timeout: 5s
       retries: 5
 
+  redis:
+    image: redis:7.0.4-alpine
+    restart: always
+    ports:
+      - "6379:6379"
+    command: redis-server --requirepass redispass
+    volumes:
+      - dev-redis-data:/var/lib/redis/data
+    healthcheck:
+      test: [ "CMD", "redis-cli", "--raw", "incr", "ping" ]
+      interval: 2s
+      timeout: 10s
+      retries: 5
+    depends_on:
+      db:
+        condition: service_healthy
+
 volumes:
   dev-db-data:
   dev-static-data:
+  dev-redis-data:

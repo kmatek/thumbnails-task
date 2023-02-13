@@ -6,6 +6,7 @@ from django.urls import reverse
 from rest_framework.test import APITestCase
 from rest_framework import status
 from core.tests.test_models import sample_user, sample_plan, sample_thumbnail
+from core.models import ThumbnailImage
 
 IMAGE_UPLOAD_URL = reverse('thumbnail:upload-image')
 
@@ -53,6 +54,7 @@ class ImageViewsTests(APITestCase):
 
             self.assertEqual(res.status_code, status.HTTP_201_CREATED)
             self.assertEqual(self.user.image_set.count(), 1)
+            self.assertEqual(ThumbnailImage.objects.all().count(), 1)
 
     def test_image_upload_allowed_method(self):
         self.client.force_authenticate(user=self.user)

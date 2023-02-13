@@ -7,6 +7,7 @@ from django.contrib.auth.models import (
     PermissionsMixin)
 from django.utils.translation import gettext_lazy as _
 from django.core.exceptions import ValidationError
+from django.core.validators import MaxValueValidator, MinValueValidator
 from django.utils import timezone
 
 
@@ -83,6 +84,7 @@ class Plan(models.Model):
 
 
 class Image(models.Model):
+    uuid = models.UUIDField(default=uuid.uuid4, editable=False)
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     image = models.ImageField(
         upload_to=image_file_path, validators=[image_ext_validator])
@@ -103,11 +105,12 @@ class ThumbnailImage(models.Model):
 
 
 class ExpiredLinkImage(models.Model):
-    id = models.UUIDField(
+    uuid = models.UUIDField(
         primary_key=True, default=uuid.uuid4, editable=False)
     binary_image = models.ImageField(
         upload_to=image_file_path, validators=[image_ext_validator])
-    duration = models.SmallIntegerField()
+    duration = models.SmallIntegerField(
+        validators=[MaxValueValidator(30000), MinValueValidator(300)])
     date_created = models.DateTimeField(default=timezone.now)
 
     def __str__(self):

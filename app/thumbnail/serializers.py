@@ -35,5 +35,5 @@ class ImageUploadSerializer(serializers.ModelSerializer):
             .get(id=self.context.get('request').user.plan_id)
         # Create thumbnails
         for value in plan.thumbnails.all():
-            thumbnail_image = create_thumbnail(image, value)
-        return object() # Return none
+            create_thumbnail(image, value)
+        return object()  # Return none

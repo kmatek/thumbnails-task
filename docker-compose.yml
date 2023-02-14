@@ -20,6 +20,8 @@ services:
       - DB_NAME=dev_db
       - DB_USER=dev_db_user
       - DB_PASSWORD=dev_db_password
+      - CELERY_BROKER_URL=redis://:redispass@redis:6379/1
+      - CELERY_RESULT_BACKEND=redis://:redispass@redis:6379/1
       - CACHE_LOCATION=redis://:redispass@redis:6379/0
     depends_on:
       redis:
@@ -55,6 +57,27 @@ services:
     depends_on:
       db:
         condition: service_healthy
+  
+  celery:
+    build:
+      context: .
+    command: >
+      sh -c "sleep 2 &&
+             celery -A app worker --loglevel=info"
+    environment:
+      - SECRET_KEY=secret_key
+      - DEBUG=1
+      - DB_HOST=db
+      - DB_NAME=test_db
+      - DB_USER=test_db_user
+      - DB_PASSWORD=test_db_password
+      - CELERY_BROKER_URL=redis://:redispass@redis:6379/1
+      - CELERY_RESULT_BACKEND=redis://:redispass@redis:6379/1
+      - CACHE_LOCATION=redis://:redispass@redis:6379/0
+    volumes:
+       - ./app:/app
+    depends_on:
+      - app
 
 volumes:
   dev-db-data:

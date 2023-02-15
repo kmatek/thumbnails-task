@@ -291,14 +291,18 @@ class ImageViewsTests(APITestCase):
         self.assertEqual(res.status_code, status.HTTP_200_OK)
         # Make this becouse i cant figure out
         # how pass same context as in response to the serializer
-        image_url = res.data[0].get('thumbnails')[0]['thumbnailed_image']
+        image_url = res.data.get('results')[0]\
+            .get('thumbnails')[0]['thumbnailed_image']
         self.assertEqual(
             image_url[17:],
             serializer.data.get('thumbnails')[0]['thumbnailed_image']
         )
-        self.assertIn('thumbnails', res.data[0])
-        self.assertNotIn('expired_link', res.data[0])
-        self.assertNotIn('image', res.data[0])
+        self.assertIn('thumbnails', res.data.get('results')[0])
+        self.assertNotIn('expired_link', res.data.get('results')[0])
+        self.assertNotIn('image', res.data.get('results')[0])
+        self.assertIn('count', res.data)
+        self.assertIn('next', res.data)
+        self.assertIn('previous', res.data)
 
     def test_image_list_full_option(self):
         self.client.force_authenticate(self.user)
@@ -322,17 +326,21 @@ class ImageViewsTests(APITestCase):
         # Make this becouse i cant figure out
         # how pass same context as in response to the serializer
         test_list = []
-        for thumb in res.data[0].get('thumbnails'):
-            temp_dict = {
-                'thumbnailed_image': thumb.get('thumbnailed_image')[17:],
-                'value': thumb.get('value')
-            }
-            test_list.append(temp_dict)
+        for i in res.data.get('results'):
+            for thumb in i.get('thumbnails'):
+                temp_dict = {
+                    'thumbnailed_image': thumb.get('thumbnailed_image')[17:],
+                    'value': thumb.get('value')
+                }
+                test_list.append(temp_dict)
 
         for thumb in serializer.data.get('thumbnails'):
             self.assertIn(thumb, test_list)
 
         self.assertEqual(image.thumbnails.all().count(), 2)
-        self.assertIn('thumbnails', res.data[0])
-        self.assertIn('expired_link', res.data[0])
-        self.assertIn('image', res.data[0])
+        self.assertIn('thumbnails', res.data.get('results')[0])
+        self.assertIn('expired_link', res.data.get('results')[0])
+        self.assertIn('image', res.data.get('results')[0])
+        self.assertIn('count', res.data)
+        self.assertIn('next', res.data)
+        self.assertIn('previous', res.data)

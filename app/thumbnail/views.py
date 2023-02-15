@@ -2,6 +2,7 @@ from rest_framework import generics, permissions, status
 from rest_framework.response import Response
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
+from django.core.cache import cache
 from .serializers import (
     ImageUploadSerializer,
     ExpiredLinkImageSerializer,
@@ -18,6 +19,10 @@ class ImageUploadAPIView(generics.CreateAPIView):
 
     def perform_create(self, serializer):
         """Upload an image with authenticated user."""
+        cache_key = f'queryset_{self.request.user.id}'
+        queryset = cache.get(cache_key)
+        if queryset:
+            cache.delete(cache_key)
         serializer.save(user=self.request.user)
 
 
@@ -27,12 +32,18 @@ class ImageListAPIView(generics.ListAPIView):
     permission_classes = (permissions.IsAuthenticated, DoesUserHaveTier)
 
     def get_queryset(self):
-        """Get authenticated user's images."""
-        return Image.objects.filter(user=self.request.user)\
-            .select_related('user__plan')\
-            .prefetch_related('user__plan__thumbnails')\
-            .prefetch_related('thumbnails')\
-            .prefetch_related('thumbnails__thumbnail_value')
+        """Get authenticated user's images and cache them for 3 minutes."""
+        cache_key = f'queryset_{self.request.user.id}'
+        queryset = cache.get(cache_key)
+        if not queryset:
+            queryset = Image.objects.filter(user=self.request.user)\
+                .select_related('user__plan')\
+                .prefetch_related('user__plan__thumbnails')\
+                .prefetch_related('thumbnails')\
+                .prefetch_related('thumbnails__thumbnail_value')\
+                .order_by('-id')
+            cache.set(cache_key, queryset, 60*3)
+        return queryset
 
 
 class ExpiredLinkImageCreateAPIView(generics.CreateAPIView):

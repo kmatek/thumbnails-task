@@ -4,12 +4,15 @@ import os
 from PIL import Image as pill_image
 from django.urls import reverse
 from django.core.files.uploadedfile import InMemoryUploadedFile
+from django.test import override_settings
 from rest_framework.test import APITestCase
 from rest_framework import status
 from core.tests.test_models import sample_user, sample_plan, sample_thumbnail
 from core.models import ThumbnailImage, Image, ExpiredLinkImage
+from ..serializers import ImageListSerializer
 
 IMAGE_UPLOAD_URL = reverse('thumbnail:upload-image')
+IMAGE_LIST_URL = reverse('thumbnail:list-image')
 
 
 def expired_link_create_url(uuid):
@@ -20,9 +23,13 @@ def expired_link_retrieve_url(uuid):
     return reverse('thumbnail:retrieve-link', args=[uuid])
 
 
+@override_settings(
+    CELERY_TASK_ALWAYS_EAGER=True,
+    CELERY_TASK_EAGER_PROPAGATES=True
+)
 class ImageViewsTests(APITestCase):
     def setUp(self):
-        self.plan = sample_plan(name='Plan', expired_link=False)
+        self.plan = sample_plan(name='Plan')
         self.plan.thumbnails.add(sample_thumbnail(**{'value': 100}))
         self.user = sample_user(
             email='test@email.com', name='test', password='testpassword')
@@ -238,3 +245,94 @@ class ImageViewsTests(APITestCase):
         self.assertIn('binary_image', res.data)
         self.assertTrue(link.binary_image)
         self.assertEqual(link.duration, payload['duration'])
+
+    def test_image_list_not_allowed_methods(self):
+        self.client.force_authenticate(self.user)
+        self.user.plan = self.plan
+
+        res = self.client.post(IMAGE_LIST_URL)
+        self.assertEqual(res.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
+
+        res = self.client.put(IMAGE_LIST_URL)
+        self.assertEqual(res.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
+
+        res = self.client.patch(IMAGE_LIST_URL)
+        self.assertEqual(res.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
+
+        res = self.client.delete(IMAGE_LIST_URL)
+        self.assertEqual(res.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
+
+    def test_image_list_permissions(self):
+        res = self.client.get(IMAGE_LIST_URL)
+        self.assertEqual(res.status_code, status.HTTP_403_FORBIDDEN)
+
+        self.client.force_authenticate(self.user)
+        res = self.client.get(IMAGE_LIST_URL)
+        self.assertEqual(res.status_code, status.HTTP_403_FORBIDDEN)
+
+        self.user.plan = self.plan
+        res = self.client.get(IMAGE_LIST_URL)
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+
+    def test_image_list(self):
+        self.client.force_authenticate(self.user)
+        self.user.plan = self.plan
+        self.user.save()
+        with tempfile.NamedTemporaryFile(suffix='.png') as image_file:
+            img = pill_image.new('RGB', (200, 200))
+            img.save(image_file, 'png')
+            image_file.seek(0)
+            res = self.client.post(
+                IMAGE_UPLOAD_URL, {'image': image_file}, format='multipart')
+
+        image = Image.objects.all().first()
+        res = self.client.get(IMAGE_LIST_URL)
+        serializer = ImageListSerializer(image)
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        # Make this becouse i cant figure out
+        # how pass same context as in response to the serializer
+        image_url = res.data[0].get('thumbnails')[0]['thumbnailed_image']
+        self.assertEqual(
+            image_url[17:],
+            serializer.data.get('thumbnails')[0]['thumbnailed_image']
+        )
+        self.assertIn('thumbnails', res.data[0])
+        self.assertNotIn('expired_link', res.data[0])
+        self.assertNotIn('image', res.data[0])
+
+    def test_image_list_full_option(self):
+        self.client.force_authenticate(self.user)
+        self.plan.thumbnails.add(sample_thumbnail(**{'value': 400}))
+        self.plan.original_image = True
+        self.plan.expired_link = True
+        self.plan.save()
+        self.user.plan = self.plan
+        self.user.save()
+        with tempfile.NamedTemporaryFile(suffix='.png') as image_file:
+            img = pill_image.new('RGB', (200, 200))
+            img.save(image_file, 'png')
+            image_file.seek(0)
+            res = self.client.post(
+                IMAGE_UPLOAD_URL, {'image': image_file}, format='multipart')
+
+        image = Image.objects.all().first()
+        res = self.client.get(IMAGE_LIST_URL)
+        serializer = ImageListSerializer(image)
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        # Make this becouse i cant figure out
+        # how pass same context as in response to the serializer
+        test_list = []
+        for thumb in res.data[0].get('thumbnails'):
+            temp_dict = {
+                'thumbnailed_image': thumb.get('thumbnailed_image')[17:],
+                'value': thumb.get('value')
+            }
+            test_list.append(temp_dict)
+
+        for thumb in serializer.data.get('thumbnails'):
+            self.assertIn(thumb, test_list)
+
+        self.assertEqual(image.thumbnails.all().count(), 2)
+        self.assertIn('thumbnails', res.data[0])
+        self.assertIn('expired_link', res.data[0])
+        self.assertIn('image', res.data[0])

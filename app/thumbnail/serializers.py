@@ -1,34 +1,14 @@
-from io import BytesIO
-from PIL import Image as pill_image
-from django.core.files.uploadedfile import InMemoryUploadedFile
 from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers, status
 from rest_framework.reverse import reverse
-from core.models import (
-    Image, ThumbnailImage, Plan, Thumbnail, ExpiredLinkImage)
-
-
-def create_thumbnail(image: Image, value: Thumbnail) -> None:
-    """Create a thumbnail according to given image and size."""
-    with pill_image.open(image.image) as im:
-        io_img = BytesIO()
-        # Make thumbnail
-        size = value.value, value.value
-        im.thumbnail(size)
-        im.save(io_img, 'png')
-        thumb_image = InMemoryUploadedFile(
-            io_img, 'image', 'image.png',
-            'png', io_img.tell(), None)
-        # Creating a model
-        ThumbnailImage.objects.create(
-            original_image=image, thumbnail_value=value,
-            thumbnailed_image=thumb_image)
+from core.models import (Image, Plan, ThumbnailImage, ExpiredLinkImage)
+from .tasks import create_thumbnail, create_binary_image
 
 
 class ImageUploadSerializer(serializers.ModelSerializer):
     class Meta:
         model = Image
-        exclude = ('user', 'uuid', 'id')
+        exclude = ('user', 'uuid', 'id', 'thumbnails')
         extra_kwargs = {'image': {'write_only': True}}
 
     def create(self, validated_data):
@@ -37,9 +17,71 @@ class ImageUploadSerializer(serializers.ModelSerializer):
         plan = Plan.objects.prefetch_related('thumbnails') \
             .get(id=self.context.get('request').user.plan_id)
         # Create thumbnails
+        thumbs = []
         for value in plan.thumbnails.all():
-            create_thumbnail(image, value)
+            thumbs.append(create_thumbnail.delay(image.id, value.value).get())
+        image.thumbnails.add(*thumbs)
         return object()  # Return none
+
+
+class ThumbnailImageSerializer(serializers.HyperlinkedModelSerializer):
+    class Meta:
+        model = ThumbnailImage
+        fields = ('thumbnailed_image',)
+
+    def to_representation(self, instance):
+        """Change thumbnail_value to value."""
+        ret = super().to_representation(instance)
+        ret['value'] = instance.thumbnail_value.value
+        return ret
+
+
+class ImageListSerializer(serializers.ModelSerializer):
+    thumbnails = serializers.SerializerMethodField(read_only=True)
+    expired_link = serializers.SerializerMethodField(read_only=True)
+
+    class Meta:
+        model = Image
+        exclude = ('uuid', 'user', 'id')
+
+    def get_expired_link(self, obj):
+        """Create binary_image link."""
+        request = self.context.get('request')
+        return reverse(
+                "thumbnail:create-link",
+                args=[obj.uuid], request=request)
+
+    def get_thumbnails(self, obj):
+        """Shows fields and thumbnails depending on user's plan."""
+        thumbnails = list(obj.thumbnails.all())
+        thumb_values = [thumb.thumbnail_value.value for thumb in thumbnails]
+        allowed_thumb_values = [
+            thumb.value
+            for thumb in obj.user.plan.thumbnails.all()
+        ]
+        # Create new thumbails if user upgrade plan.
+        if not allowed_thumb_values == thumb_values:
+            thumbs = []
+            for value in allowed_thumb_values:
+                if value not in thumb_values:
+                    thumbs.append(create_thumbnail.delay(obj.id, value).get())
+            obj.thumbnails.add(*thumbs)
+        # Filter query according to allowed thumbnail values
+        query = filter(
+            lambda x: x.thumbnail_value.value in allowed_thumb_values,
+            thumbnails
+        )
+        return ThumbnailImageSerializer(
+            query, many=True, context=self.context).data
+
+    def to_representation(self, instance):
+        """Change reprenstation vie according to the plan."""
+        ret = super().to_representation(instance)
+        if not instance.user.plan.expired_link:
+            ret.pop('expired_link')
+        if not instance.user.plan.original_image:
+            ret.pop('image')
+        return ret
 
 
 class ExpiredLinkImageSerializer(serializers.ModelSerializer):
@@ -76,14 +118,6 @@ class ExpiredLinkImageSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         image = validated_data['image']
-        with pill_image.open(image.image) as im:
-            io_img = BytesIO()
-            # Make binary image
-            im = im.convert('1')
-            im.save(io_img, 'png',)
-            b_image = InMemoryUploadedFile(
-                io_img, 'image', 'image.png',
-                'png', io_img.tell(), None)
-            # Creating a model
-            return ExpiredLinkImage.objects.create(
-                duration=validated_data['duration'], binary_image=b_image)
+        duration = validated_data['duration']
+        result = create_binary_image.delay(image.id, duration)
+        return ExpiredLinkImage.objects.get(uuid=result.get())

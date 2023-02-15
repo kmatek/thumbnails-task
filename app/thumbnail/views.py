@@ -2,9 +2,13 @@ from rest_framework import generics, permissions, status
 from rest_framework.response import Response
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
-from .serializers import ImageUploadSerializer, ExpiredLinkImageSerializer
+from .serializers import (
+    ImageUploadSerializer,
+    ExpiredLinkImageSerializer,
+    ImageListSerializer
+)
 from .permissions import DoesUserHaveTier, CanCreateLink
-from core.models import ExpiredLinkImage
+from core.models import ExpiredLinkImage, Image
 
 
 class ImageUploadAPIView(generics.CreateAPIView):
@@ -13,7 +17,22 @@ class ImageUploadAPIView(generics.CreateAPIView):
     permission_classes = (permissions.IsAuthenticated, DoesUserHaveTier)
 
     def perform_create(self, serializer):
+        """Upload an image with authenticated user."""
         serializer.save(user=self.request.user)
+
+
+class ImageListAPIView(generics.ListAPIView):
+    """List user images."""
+    serializer_class = ImageListSerializer
+    permission_classes = (permissions.IsAuthenticated, DoesUserHaveTier)
+
+    def get_queryset(self):
+        """Get authenticated user's images."""
+        return Image.objects.filter(user=self.request.user)\
+            .select_related('user__plan')\
+            .prefetch_related('user__plan__thumbnails')\
+            .prefetch_related('thumbnails')\
+            .prefetch_related('thumbnails__thumbnail_value')
 
 
 class ExpiredLinkImageCreateAPIView(generics.CreateAPIView):

@@ -88,20 +88,14 @@ class Image(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     image = models.ImageField(
         upload_to=image_file_path, validators=[image_ext_validator])
-
-    def __str__(self):
-        return self.user.name
+    thumbnails = models.ManyToManyField('ThumbnailImage')
 
 
 class ThumbnailImage(models.Model):
-    original_image = models.ForeignKey(Image, on_delete=models.CASCADE)
     thumbnail_value = models.ForeignKey(
         Thumbnail, on_delete=models.PROTECT, null=True)
     thumbnailed_image = models.ImageField(
         upload_to=image_file_path, validators=[image_ext_validator])
-
-    def __str__(self):
-        return f'Thumbnail {self.original_image.user.name}'
 
 
 class ExpiredLinkImage(models.Model):
@@ -112,6 +106,3 @@ class ExpiredLinkImage(models.Model):
     duration = models.SmallIntegerField(
         validators=[MaxValueValidator(30000), MinValueValidator(300)])
     date_created = models.DateTimeField(default=timezone.now)
-
-    def __str__(self):
-        return f'{self.pk} - {self.date_created}'

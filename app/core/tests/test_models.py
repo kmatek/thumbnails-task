@@ -183,14 +183,6 @@ class ModelsTests(TestCase):
 
     @patch('core.models.uuid.uuid4')
     def test_thumbnail_image_model(self, patched_uuid):
-        params = {
-            'email': 'test@email.com',
-            'name': 'test',
-            'password': 'testpassword'
-        }
-        user = sample_user(**params)
-        image = sample_image(user=user)
-
         with tempfile.NamedTemporaryFile(suffix='.png') as thumbnail_file:
             thumbnail = Image.new('RGB', (1, 1))
             thumbnail.save(thumbnail_file, 'png')
@@ -198,7 +190,7 @@ class ModelsTests(TestCase):
                 thumbnail_file, 'thumb', 'thumb.png',
                 'png', thumbnail_file.tell(), None)
             thumbnail_model = sample_thumbnail_image(
-                original_image=image, thumbnailed_image=thumbnail,
+                thumbnailed_image=thumbnail,
                 thumbnail_value=sample_thumbnail(**{'value': '1'}))
 
             uuid = 'test-uuid'
@@ -208,13 +200,6 @@ class ModelsTests(TestCase):
             self.assertTrue(thumbnail_model.thumbnailed_image)
 
     def test_thumbnail_image_model_upload_with_invalid_ext(self):
-        params = {
-            'email': 'test@email.com',
-            'name': 'test',
-            'password': 'testpassword'
-        }
-        user = sample_user(**params)
-        image = sample_image(user=user)
         with self.assertRaises(ValidationError):
             with tempfile.NamedTemporaryFile(suffix='.gif') as thumbnail_file:
                 thumbnail = Image.new('RGB', (1, 1))
@@ -223,7 +208,7 @@ class ModelsTests(TestCase):
                     thumbnail_file, 'thumbnail', 'thumbnail.gif',
                     'gif', thumbnail_file.tell(), None)
                 thumbnail_model = sample_thumbnail_image(
-                    original_image=image, thumbnailed_image=thumbnail,
+                    thumbnailed_image=thumbnail,
                     thumbnail_value=sample_thumbnail(**{'value': '1'}))
                 thumbnail_model.full_clean()  # validate fields without saving
 

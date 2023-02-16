@@ -3,7 +3,7 @@ from django.contrib.auth import get_user_model
 from django.utils.translation import gettext as _
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from django.contrib.auth.models import Group
-from .models import Plan, Thumbnail
+from .models import Plan, Thumbnail, ThumbnailImage, Image
 
 
 class UserAdmin(BaseUserAdmin):
@@ -56,3 +56,5 @@ admin.site.unregister(Group)
 admin.site.register(get_user_model(), UserAdmin)
 admin.site.register(Plan, PlanAdmin)
 admin.site.register(Thumbnail)
+admin.site.register(ThumbnailImage)
+admin.site.register(Image)

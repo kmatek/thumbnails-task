@@ -20,9 +20,12 @@ class ImageUploadAPIView(generics.CreateAPIView):
     def perform_create(self, serializer):
         """Upload an image with authenticated user."""
         cache_key = f'queryset_{self.request.user.id}'
+        # Get cached queryset
         queryset = cache.get(cache_key)
+        # Clear cache if exists
         if queryset:
             cache.delete(cache_key)
+        # Pass authenticated user to the serializer
         serializer.save(user=self.request.user)
 
 
@@ -32,9 +35,11 @@ class ImageListAPIView(generics.ListAPIView):
     permission_classes = (permissions.IsAuthenticated, DoesUserHaveTier)
 
     def get_queryset(self):
-        """Get authenticated user's images and cache them for 3 minutes."""
+        """Get authenticated user's images and cache them for 15 minutes."""
         cache_key = f'queryset_{self.request.user.id}'
+        # Get cached queryset
         queryset = cache.get(cache_key)
+        # Set cache if not exists
         if not queryset:
             queryset = Image.objects.filter(user=self.request.user)\
                 .select_related('user__plan')\
@@ -42,7 +47,7 @@ class ImageListAPIView(generics.ListAPIView):
                 .prefetch_related('thumbnails')\
                 .prefetch_related('thumbnails__thumbnail_value')\
                 .order_by('-id')
-            cache.set(cache_key, queryset, 60*3)
+            cache.set(cache_key, queryset, 60*15)
         return queryset
 
 
@@ -71,8 +76,11 @@ class ExpiredLinkImageRetrieveAPIView(generics.RetrieveAPIView):
 
     def retrieve(self, *args, **kwargs):
         """Check that link is still available."""
+        # Get binary image
         instance = self.get_object()
+        # Get passed seconds since created
         passed_seconds = timezone.now() - instance.date_created
+        # Check that link is still available
         if passed_seconds.seconds > instance.duration:
             return Response(
                 {'detail': _('Link has expired.')},

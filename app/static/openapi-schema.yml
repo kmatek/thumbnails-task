@@ -1,0 +1,164 @@
+openapi: 3.0.2
+info:
+  title: Documentation
+  description: |-
+    Hey there!
+
+    Here you can try how mine api works!
+
+    [Git repository](https://github.com/kmatek/thumbnails-task)
+
+    Test basic: Token tokenbasic
+
+    Test premium: Token tokenpremium
+
+    Test Enterprise: Token tokenenterprise
+paths:
+  /api/images/:
+    get:
+      security:
+        - tokenAuth: []
+      operationId: listImageLists
+      summary: List authenticated user images.
+      parameters:
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  count:
+                    type: integer
+                    example: 123
+                  next:
+                    type: string
+                    nullable: true
+                    format: uri
+                    example: http://api.example.org/accounts/?page=4
+                  previous:
+                    type: string
+                    nullable: true
+                    format: uri
+                    example: http://api.example.org/accounts/?page=2
+                  results:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ImageList'
+          description: ''
+  /api/images/retreive-link/{bimage_pk}/:
+    get:    
+      operationId: retrieveExpiredLinkImage
+      summary: Retrieve an expired link with a binary image.
+      parameters:
+      - name: bimage_pk
+        in: path
+        required: true
+        schema:
+          type: uuid
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExpiredLinkImage'
+  /api/images/upload/:
+    post:
+      security:
+        - tokenAuth: []
+      operationId: createImageUpload
+      summary: Upload an image view.
+      parameters: []
+      requestBody:
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ImageUpload'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ImageUpload'
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ImageUpload'
+  /api/images/create-link/{image_pk}/:
+    post:
+      security:
+        - tokenAuth: []
+      operationId: createExpiredLinkImage
+      summary: Create en expired link with a binary image.
+      parameters:
+      - name: image_pk
+        in: path
+        required: true
+        schema:
+          type: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ExpiredLinkImage'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ExpiredLinkImage'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ExpiredLinkImage'
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExpiredLinkImage'
+components:
+  schemas:
+    ImageList:
+      type: object
+      properties:
+        thumbnails:
+          type: string
+          readOnly: true
+        expired_link:
+          type: string
+          readOnly: true
+        image:
+          type: string
+          format: binary
+      required:
+      - image
+    ExpiredLinkImage:
+      type: object
+      properties:
+        binary_image:
+          type: string
+          format: binary
+          readOnly: true
+        duration:
+          type: integer
+          maximum: 30000
+          minimum: 300
+          writeOnly: true
+      required:
+      - duration
+    ImageUpload:
+      type: object
+      properties:
+        image:
+          type: file
+          format: uri
+          writeOnly: true
+      required:
+      - image
+  securitySchemes:
+    tokenAuth:
+      type: apiKey
+      in: header       
+      name: Authorization

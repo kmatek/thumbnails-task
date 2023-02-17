@@ -48,7 +48,7 @@ class ImageViewsTests(APITestCase):
             res = self.client.post(
                 IMAGE_UPLOAD_URL, {'image': image_file}, format='multipart')
 
-            self.assertEqual(res.status_code, status.HTTP_403_FORBIDDEN)
+            self.assertEqual(res.status_code, status.HTTP_401_UNAUTHORIZED)
 
         self.client.force_authenticate(user=self.user)
         with tempfile.NamedTemporaryFile(suffix='.png') as image_file:
@@ -113,6 +113,10 @@ class ImageViewsTests(APITestCase):
 
         payload = {'duration': 300}
         self.user.plan = self.plan
+        res = self.client.post(
+            expired_link_create_url(image_model.uuid), payload)
+        self.assertEqual(res.status_code, status.HTTP_401_UNAUTHORIZED)
+
         self.client.force_authenticate(self.user)
         res = self.client.post(
             expired_link_create_url(image_model.uuid), payload)
@@ -264,7 +268,7 @@ class ImageViewsTests(APITestCase):
 
     def test_image_list_permissions(self):
         res = self.client.get(IMAGE_LIST_URL)
-        self.assertEqual(res.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(res.status_code, status.HTTP_401_UNAUTHORIZED)
 
         self.client.force_authenticate(self.user)
         res = self.client.get(IMAGE_LIST_URL)

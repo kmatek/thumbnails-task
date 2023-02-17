@@ -1,0 +1,100 @@
+[
+    {
+        "model": "core.thumbnail",
+        "pk": 1,
+        "fields": {
+            "value": 200
+        }
+    },
+    {
+        "model": "core.thumbnail",
+        "pk": 2,
+        "fields": {
+            "value": 400
+        }   
+    },
+    {
+        "model": "core.plan",
+        "pk": "1",
+        "fields": {
+            "name": "Basic",
+            "thumbnails": [1]
+        }
+    },
+    {
+        "model": "core.plan",
+        "pk": "2",
+        "fields": {
+            "name": "Premium",
+            "original_image": true,
+            "thumbnails": [1, 2]
+        }
+    },
+    {
+        "model": "core.plan",
+        "pk": "3",
+        "fields": {
+            "name": "Enterprise",
+            "expired_link": true,
+            "original_image": true,
+            "thumbnails": [1, 2]
+        }
+    },
+    {
+        "model": "core.user",
+        "pk": "1",
+        "fields": {
+            "name": "Basic user",
+            "email": "basic@user.com",
+            "password": "basicpassword",
+            "plan": "1"
+        }
+    },
+    {
+        "model": "core.user",
+        "pk": "2",
+        "fields": {
+            "name": "Premium user",
+            "email": "premium@user.com",
+            "password": "premiumpassword",
+            "plan": "2"
+        }
+    },
+    {
+        "model": "core.user",
+        "pk": "3",
+        "fields": {
+            "name": "Enterprise user",
+            "email": "enterprise@user.com",
+            "password": "enterprisepassword",
+            "plan": "3"
+        }
+    },
+    {
+        "model": "authtoken.token",
+        "pk": "1",
+        "fields": {
+            "user": "1",
+            "key": "tokenbasic",
+            "created": "2023-01-01 00:00:00"
+        }
+    },
+    {
+        "model": "authtoken.token",
+        "pk": "2",
+        "fields": {
+            "user": "2",
+            "key": "tokenpremium",
+            "created": "2023-01-01 00:00:00"
+        }
+    },
+    {
+        "model": "authtoken.token",
+        "pk": "3",
+        "fields": {
+            "user": "3",
+            "key": "tokenenterprise",
+            "created": "2023-01-01 00:00:00"
+        }
+    }
+]

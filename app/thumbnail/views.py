@@ -1,4 +1,4 @@
-from rest_framework import generics, permissions, status
+from rest_framework import generics, permissions, status, authentication
 from rest_framework.response import Response
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
@@ -16,6 +16,7 @@ class ImageUploadAPIView(generics.CreateAPIView):
     """Upload an image view."""
     serializer_class = ImageUploadSerializer
     permission_classes = (permissions.IsAuthenticated, DoesUserHaveTier)
+    authentication_classes = (authentication.TokenAuthentication,)
 
     def perform_create(self, serializer):
         """Upload an image with authenticated user."""
@@ -33,6 +34,7 @@ class ImageListAPIView(generics.ListAPIView):
     """List user images."""
     serializer_class = ImageListSerializer
     permission_classes = (permissions.IsAuthenticated, DoesUserHaveTier)
+    authentication_classes = (authentication.TokenAuthentication,)
 
     def get_queryset(self):
         """Get authenticated user's images and cache them for 15 minutes."""
@@ -55,6 +57,7 @@ class ExpiredLinkImageCreateAPIView(generics.CreateAPIView):
     """Create en expired link with a binary image."""
     serializer_class = ExpiredLinkImageSerializer
     permission_classes = (permissions.IsAuthenticated, CanCreateLink)
+    authentication_classes = (authentication.TokenAuthentication,)
 
     def get_serializer_context(self):
         """Add image_uuid to the context."""

@@ -27,18 +27,33 @@ def create_thumb(image: Image, thumbnail: Thumbnail) -> int:
 
 
 @shared_task
-def create_thumbnails(image_id: int) -> None:
+def create_thumbnails(image_id: int, thumbnail_values: list[int] = []) -> None:
     """Create thumbnails for all values."""
     # Get image
     image = Image.objects.get(id=image_id)
-    # Get thumbnails
-    thumbnails = Thumbnail.objects.all()
+    # Create or update thumbnails
     thumbnail_ids = []
-    # Create thumbnails for every thumbnail
-    for thumbnail in thumbnails:
-        model_id = create_thumb(image, thumbnail)
-        # Append model's id
-        thumbnail_ids.append(model_id)
+    # Update
+    if thumbnail_values:
+        # Create thumbnail for each value
+        for thumb_value in thumbnail_values:
+            # Get thumbnail
+            # I had a problem here and couldnt figure it out so do
+            thumbnail = Thumbnail.objects.get(value=thumb_value)
+            # raise ValueError(thumbnail)
+            # Create model
+            model_id = create_thumb(image, thumbnail)
+            # Append model's id
+            thumbnail_ids.append(model_id)
+    # Create
+    else:
+        # Get thumbnails
+        thumbnails = Thumbnail.objects.all()
+        # Create thumbnails for every thumbnail
+        for thumbnail in thumbnails:
+            model_id = create_thumb(image, thumbnail)
+            # Append model's id
+            thumbnail_ids.append(model_id)
     # Add new thumbnails to the image
     image.thumbnails.add(*thumbnail_ids)
     image.save()

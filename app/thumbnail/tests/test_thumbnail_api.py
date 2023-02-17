@@ -25,7 +25,8 @@ def expired_link_retrieve_url(uuid):
 
 @override_settings(
     CELERY_TASK_ALWAYS_EAGER=True,
-    CELERY_TASK_EAGER_PROPAGATES=True
+    CELERY_TASK_EAGER_PROPAGATES=True,
+    SUSPEND_SIGNALS=True
 )
 class ImageViewsTests(APITestCase):
     def setUp(self):
@@ -61,6 +62,7 @@ class ImageViewsTests(APITestCase):
             self.assertEqual(res.status_code, status.HTTP_403_FORBIDDEN)
 
         self.user.plan = self.plan
+        self.user.save()
         with tempfile.NamedTemporaryFile(suffix='.png') as image_file:
             img = pill_image.new('RGB', (200, 200))
             img.save(image_file, 'png')
@@ -75,6 +77,7 @@ class ImageViewsTests(APITestCase):
     def test_image_upload_not_allowed_methods(self):
         self.client.force_authenticate(user=self.user)
         self.user.plan = self.plan
+        self.user.save()
 
         res = self.client.get(IMAGE_UPLOAD_URL)
         self.assertEqual(res.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
@@ -91,6 +94,7 @@ class ImageViewsTests(APITestCase):
     def test_image_upload_with_wrong_ext(self):
         self.client.force_authenticate(user=self.user)
         self.user.plan = self.plan
+        self.user.save()
 
         with tempfile.NamedTemporaryFile(suffix='.gif') as image_file:
             img = pill_image.new('RGB', (200, 200))
@@ -112,7 +116,6 @@ class ImageViewsTests(APITestCase):
             image_model = Image.objects.create(user=self.user, image=image)
 
         payload = {'duration': 300}
-        self.user.plan = self.plan
         res = self.client.post(
             expired_link_create_url(image_model.uuid), payload)
         self.assertEqual(res.status_code, status.HTTP_401_UNAUTHORIZED)
@@ -124,6 +127,7 @@ class ImageViewsTests(APITestCase):
 
         self.plan.expired_link = True
         self.user.plan = self.plan
+        self.user.save()
         res = self.client.post(
             expired_link_create_url(image_model.uuid), payload)
         self.assertEqual(res.status_code, status.HTTP_201_CREATED)
@@ -133,6 +137,7 @@ class ImageViewsTests(APITestCase):
         self.client.force_authenticate(self.user)
         self.plan.expired_link = True
         self.user.plan = self.plan
+        self.user.save()
         payload = {'duration': 300}
 
         with tempfile.NamedTemporaryFile(suffix='.png') as image_file:
@@ -182,6 +187,7 @@ class ImageViewsTests(APITestCase):
         self.client.force_authenticate(self.user)
         self.plan.expired_link = True
         self.user.plan = self.plan
+        self.user.save()
         payload = {'duration': 299}
 
         with tempfile.NamedTemporaryFile(suffix='.png') as image_file:
@@ -228,6 +234,7 @@ class ImageViewsTests(APITestCase):
         self.client.force_authenticate(self.user)
         self.plan.expired_link = True
         self.user.plan = self.plan
+        self.user.save()
         payload = {'duration': 300}
 
         with tempfile.NamedTemporaryFile(suffix='.png') as image_file:

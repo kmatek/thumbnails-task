@@ -1,9 +1,12 @@
-from django.test import TestCase, Client
+from django.test import TestCase, Client, override_settings
 from django.contrib.auth import get_user_model
 from django.urls import reverse
 from core.models import Plan, Thumbnail
 
 
+@override_settings(
+    SUSPEND_SIGNALS=True
+)
 class AdminSiteTests(TestCase):
 
     def setUp(self):

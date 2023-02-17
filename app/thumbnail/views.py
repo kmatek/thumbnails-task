@@ -49,7 +49,7 @@ class ImageListAPIView(generics.ListAPIView):
                 .prefetch_related('thumbnails')\
                 .prefetch_related('thumbnails__thumbnail_value')\
                 .order_by('-id')
-            cache.set(cache_key, queryset, 60*15)
+            cache.set(cache_key, queryset, 10)
         return queryset
 
 

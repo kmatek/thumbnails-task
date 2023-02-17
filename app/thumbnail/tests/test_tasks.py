@@ -5,12 +5,13 @@ from django.test import TestCase, override_settings
 from django.contrib.auth import get_user_model
 from django.core.files.uploadedfile import InMemoryUploadedFile
 from ..tasks import create_thumbnails, create_binary_image
-from core.models import ThumbnailImage, Image, Thumbnail, ExpiredLinkImage
+from core.models import Image, Thumbnail, ExpiredLinkImage
 
 
 @override_settings(
     CELERY_TASK_ALWAYS_EAGER=True,
-    CELERY_TASK_EAGER_PROPAGATES=True
+    CELERY_TASK_EAGER_PROPAGATES=True,
+    SUSPEND_SIGNALS=True
 )
 class CeleryTasksTest(TestCase):
     def test_create_thumbnail_task(self):
@@ -20,6 +21,7 @@ class CeleryTasksTest(TestCase):
             'password': 'testpassword'
         }
         user = get_user_model().objects.create(**params)
+        # Before changed plan
         Thumbnail.objects.create(value=200)
 
         with tempfile.NamedTemporaryFile(suffix='.png') as image_file:
@@ -33,9 +35,17 @@ class CeleryTasksTest(TestCase):
 
         result = create_thumbnails.delay(image_id=image_model.id)
         self.assertTrue(result.successful())
-        self.assertEqual(ThumbnailImage.objects.all().count(), 1)
+        self.assertEqual(image_model.thumbnails.count(), 1)
 
-    def test_create_binary_image(self):
+        # After changed plan
+        thumbnail = Thumbnail.objects.create(value=400)
+        thumbnail_values = [thumbnail.value]
+        result = create_thumbnails.delay(
+            image_id=image_model.id, thumbnail_values=thumbnail_values)
+        self.assertTrue(result.successful())
+        self.assertEqual(image_model.thumbnails.count(), 2)
+
+    def test_create_binary_image_task(self):
         params = {
             'email': 'test@email.com',
             'name': 'test',

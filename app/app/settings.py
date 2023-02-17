@@ -26,8 +26,10 @@ SECRET_KEY = os.environ.get('SECRET_KEY')
 DEBUG = bool(int(os.environ.get('DEBUG', '0')))
 
 ALLOWED_HOSTS = []
-
-AUTH_USER_MODEL = 'core.User' # Custom user model
+# Custom signal wrapper
+SUSPEND_SIGNALS = False
+# Custom user model
+AUTH_USER_MODEL = 'core.User'
 
 # Application definition
 

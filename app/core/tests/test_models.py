@@ -3,7 +3,7 @@ import os
 import shutil
 import tempfile
 from PIL import Image
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 from django.core.files.uploadedfile import InMemoryUploadedFile
@@ -46,6 +46,9 @@ def sample_expired_link_image(**params):
     return models.ExpiredLinkImage.objects.create(**params)
 
 
+@override_settings(
+    SUSPEND_SIGNALS=True
+)
 class ModelsTests(TestCase):
     def tearDown(self):
         """Clear media folder."""

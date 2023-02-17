@@ -40,7 +40,6 @@ def update_thumbnails(sender, instance, created, **kwargs):
         return
     else:
         # Update thumbnails
-        print(cached_plan.id, current_plan.id)
         if current_plan.id != cached_plan.id:
             # Cache new plan
             cache.set(cache_key, current_plan)
@@ -52,7 +51,6 @@ def update_thumbnails(sender, instance, created, **kwargs):
             cached_set = set(cached_thumbnails)
             difference = current_set - cached_set
             difference_values = [thumb.value for thumb in difference]
-            print(difference)
             # If there is difference between
             if difference:
                 # Get user images
@@ -69,7 +67,6 @@ def update_thumbnails(sender, instance, created, **kwargs):
                         thumb_value = thumb_image.thumbnail_value.value
                         if thumb_value in difference_values:
                             difference_values.remove(thumb_value)
-                    print(difference_values)
                     # Create thumbnails for every value
                     if difference_values:
                         create_thumbnails(
